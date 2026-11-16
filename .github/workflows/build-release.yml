@@ -6,7 +6,7 @@ on:
       tag: 
         description: 'Tag'
         required: true
-        default: '8.0.0-beta7'
+        default: '8.0.0-beta8'
       prerelease:
         description: 'Prerelease'
         required: true
@@ -70,13 +70,42 @@ jobs:
           chmod +x flatpak-dotnet-generator.py
           python3 flatpak-dotnet-generator.py ./flatpak/nuget-sources.json ${{env.PROJECT_PATH}} --dotnet ${{env.DOTNET_VERSION}} --freedesktop ${{env.FREEDESKTOP_VERSION}} --runtime linux-x64
       
-      - name: win-x64 Build
+      - name: Build win-x64
         run: dotnet publish -p:PublishProfile=win-x64 -c Release -o ./output/win-x64 ${{env.PROJECT_PATH}}
 
-      - name: linux-x64 Build
+      - name: Build linux-x64
         run: dotnet publish -p:PublishProfile=linux-x64 -c Release -o ./output/linux-x64 ${{env.PROJECT_PATH}}
 
-      - name: flatpak-x86_64 Build
+      - name: Build linux-arm64
+        run: dotnet publish -p:PublishProfile=linux-arm64 -c Release -o ./output/linux-arm64 ${{env.PROJECT_PATH}}
+
+      - name: Build osx-x64
+        run: dotnet publish -p:PublishProfile=osx-x64 -c Release -o ./output/osx-x64 ${{env.PROJECT_PATH}}
+
+      - name: Build osx-arm64
+        run: dotnet publish -p:PublishProfile=osx-arm64 -c Release -o ./output/osx-arm64 ${{env.PROJECT_PATH}}
+
+      - name: Package osx-arm64 (Unsigned)
+        run: |
+          mkdir -p ./output/package-osx-arm64/HedgeModManager.app/Contents/MacOS
+          mkdir ./output/package-osx-arm64/HedgeModManager.app/Contents/Resources
+          cp -R ./output/osx-arm64/* ./output/package-osx-arm64/HedgeModManager.app/Contents/MacOS
+          cp ./data/macOS/Icon.icns ./output/package-osx-arm64/HedgeModManager.app/Contents/Resources/Icon.icns
+          cp ./data/macOS/Info.plist ./output/package-osx-arm64/HedgeModManager.app/Contents/Info.plist
+          VERSION="${{ github.event.inputs.tag }}"
+          sed -i "s/HEDGEMM_VERSION/$VERSION/g" ./output/package-osx-arm64/HedgeModManager.app/Contents/Info.plist
+
+      - name: Package osx-x64 (Unsigned)
+        run: |
+          mkdir -p ./output/package-osx-x64/HedgeModManager.app/Contents/MacOS
+          mkdir ./output/package-osx-x64/HedgeModManager.app/Contents/Resources
+          cp -R ./output/osx-x64/* ./output/package-osx-x64/HedgeModManager.app/Contents/MacOS
+          cp ./data/macOS/Icon.icns ./output/package-osx-x64/HedgeModManager.app/Contents/Resources/Icon.icns
+          cp ./data/macOS/Info.plist ./output/package-osx-x64/HedgeModManager.app/Contents/Info.plist
+          VERSION="${{ github.event.inputs.tag }}"
+          sed -i "s/HEDGEMM_VERSION/$VERSION/g" ./output/package-osx-x64/HedgeModManager.app/Contents/Info.plist
+
+      - name: Build flatpak-x86_64
         run: flatpak-builder --user --force-clean --install-deps-from=flathub --repo=repo builddir ./flatpak/${{env.FLATPAK_ID}}.yml
 
       - name: Build Flatpak Bundle
@@ -88,9 +117,12 @@ jobs:
           mv ./output/win-x64/HedgeModManager.UI.exe ./release/HedgeModManager.exe
           mv ./flatpak/${{env.FLATPAK_ID}}.flatpak ./release/${{env.FLATPAK_ID}}.flatpak
           tar -czvf ./release/HedgeModManager-linux-x64.tar.gz ./output/linux-x64
+          tar -czvf ./release/HedgeModManager-linux-arm64.tar.gz ./output/linux-arm64
+          (cd output/package-osx-x64 && zip -r ../../release/HedgeModManager-osx-x64-unsigned.zip ./HedgeModManager.app)
+          (cd output/package-osx-arm64 && zip -r ../../release/HedgeModManager-osx-arm64-unsigned.zip ./HedgeModManager.app)
 
       - name: Create Release
-        uses: softprops/action-gh-release@v3.0.2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             ./release/*
