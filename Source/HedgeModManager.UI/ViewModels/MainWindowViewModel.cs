@@ -96,8 +96,9 @@ public partial class MainWindowViewModel : ViewModelBase
             os = "macOS";
         Logger.Information($"System: {os} (OS: {RuntimeInformation.OSArchitecture}, Process: {RuntimeInformation.ProcessArchitecture})");
         string build = RuntimeInformation.RuntimeIdentifier;
-        if (Program.IsDebugBuild)
-            build += " (Debug)";
+#if DEBUG
+        build += " (Debug)";
+#endif
         if (!string.IsNullOrEmpty(Program.FlatpakID))
         {
             if (build.EndsWith(')'))
