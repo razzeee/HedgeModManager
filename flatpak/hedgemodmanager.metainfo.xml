@@ -119,4 +119,8 @@
   </releases>
 
   <launchable type="desktop-id">io.github.hedge_dev.hedgemodmanager.desktop</launchable>
+  <categories>
+    <category>Game</category>
+    <category>GameTool</category>
+  </categories>
 </component>
